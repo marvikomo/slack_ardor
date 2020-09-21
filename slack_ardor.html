@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Slack demo on Ardor</title>
+	<script src="https://ajax.aspnetcdn.com/ajax/jquery/jquery-3.3.1.min.js"></script>
+	
+<style> 
+*,
+*:before,
+*:after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial;
+  background-color: #f2f2f2;
+}
+
+.box { 
+  padding: 1em;
+}
+
+input {
+  width: 100%;
+  padding: 1em;
+  outline: none;
+  border: 1px solid #f2f2f2;
+}
+
+.message-list {
+  margin: 0;
+  padding: 0;
+}
+
+.message-list li {
+  padding: .2em;
+  margin-top: 1em;
+  margin-bottom: 1em;
+  background-color: #f2f2f2;
+}
+
+.app-layout {
+  display: grid;
+  height: 100vh;
+  grid-template-columns: 250px 1fr;
+  grid-template-rows: auto 1fr auto;
+}
+
+.header     { background-color: #ffffff; }
+.teams      { background-color: #362233; text-align: center; color: #fff;}
+.channels   { background-color: #52364E; color: #ccc;}
+.messages   { background-color: #ffffff; color: #333;}
+.write      { background-color: #f2f2f2; }
+.login		{ background-color: #362233; }
+
+.teams {
+  font-size: 80%;
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.channels {
+  grid-column: 1;
+  grid-row: 2 / 3;
+}
+
+.channel_sidebar
+{
+    display: block;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+
+}
+
+.header {
+  grid-column: 2;
+  grid-row: 1;
+  border-bottom: 1px solid #999;
+  color: #999;
+}
+#channel_name {
+  font-weight: bold;
+  font-size:120%;
+  color:#000;
+}
+#channel_address {
+	font-size: 100%;
+	margin-left: 0.3em;
+	color: #aaa;
+}
+.channel_info {
+	font-size: 90%;
+	padding-left: 1em;
+	padding-top:0.2em;
+}
+
+.messages {
+  grid-column: 2;
+  grid-row: 2;
+  padding: 0 1em;
+  overflow-y: scroll;
+}
+
+.input {
+  grid-column: 2;
+  grid-row: 3;
+}
+
+a.channel {
+	color: #aaa;
+	text-decoration: none;
+	text-align: left;
+}
+.channles-list {
+	list-style-type: none;
+}
+.channles-list li {
+	margin: 0.2em;
+	list-style-type: none;
+}
+div.message {
+	padding: 1em 0.2em;
+	
+}
+div.message_body {
+	padding-top: 0.3em;
+	padding-left: 0.4em ;
+}
+span.sender {
+	font-weight: bold;
+}
+span.datatime {
+	font-size: 80%;
+	color: #aaa;
+}
+.account_note {
+	font-weight: normal;
+	font-size: 90%;
+	color: #999;
+}
+a.selected_channel {
+	font-weight: bold;
+	color: #FFF;
+}
+#current_login_account {
+	margin:0.3em 0.3em;
+	margin-bottom: 0.5em;
+	color: #ccc;
+}
+#current_login_name {
+	font-size: 120%;
+}
+#select_node {
+	width: 90%;
+}
+.app_info {
+	font-size: 75%;
+	border: 1px solid #aaa;
+	padding: 0.5em;
+	margin-top: 1.5em;
+}
+</style>
+</head>
+<body>
+<div class='app-layout'>
+    <div class='teams box'>
+			<div id='current_login_name'></div>
+			<div id='current_login_account'></div>
+	</div>
+    <div class='channels box'><span class="channel_sidebar">Channels</span>
+	  <ul class='channles-list'>
+        <li><a class="channel" id="ARDOR-Q8S4-UKTF-9GDW-GFBN5" data-channel-name="ardor" href="#" ># ardor</a></li>
+        <li><a class="channel" id="ARDOR-RG4S-KDQ9-HBL5-AKC2C" data-channel-name="general" href="#" ># general</a></li>
+        <li><a class="channel" id="ARDOR-SD2N-V3A6-LXJH-4ZTKZ" data-channel-name="random" href="#" ># random</a></li>
+        <li><a class="channel" id="ARDOR-CAT5-YP53-AEQE-CFM26" data-channel-name="test" href="#" ># test</a></li>
+      </ul>
+	
+	  <div class="app_info">
+		This is a demo example showing a Slack like message board building on top of the Ardor platform. <br/><br/>
+<br/>
+	  </div>
+	</div>
+	<div class='login box'>
+		<input type="password" style="text-align:left;margin-top:8px;height:1em;" id="text_passphrase" placeholder='Input Passphrase here to Login.'></input>
+	</div>
+    <div class='header box'><span id='channel_name'># test</span> <span id='channel_address'></span><div class='channel_info'></div></div>
+    <div class='messages box' style=''>
+		<div class='message'>
+			<div class='message_header'><span class='sender'></span><span class='datatime'></span></div>
+			<div class='message_body'>No messages.</div>
+		</div>
+    </div>
+    <div class='input box'>
+      <input type='text' placeholder='< - Login to send message.' id='_message' disabled='disabled' maxlength="500" >
+    </div>
+  </div>
+  
+  </body>
+
+  <script>
+	  let MAX_MESSAGES = 100;
+	  let FEE_IGNIS = 0.03;
+	  let _node_url = "http://localhost:26876/nxt";
+
+	  let _current_login_account;
+
+	  let _passphrase;
+
+	  let _current_channel_address = 'ARDOR-RG4S-KDQ9-HBL5-AKC2C';
+
+	  let _current_channel_name = '';
+
+	  function _login()
+	  {
+		  $.ajax({
+			  url:_node_url, data : {'requestType':'getAccountId', 'secretPhrase':_passphrase},
+			  success: function(data)
+			  {
+				  _current_login_account = $.parseJSON(data)['accountRS'];
+				  $('#current_login_account').text(_current_login_account)
+				  $('#_message').attr('placeholder', "send message as " + _current_login_account);
+				  $('#_message').prop('disabled',false);
+
+				  $.ajax({
+					  url: node_url, data:{'requestType':'getAccount', 'account':_current_login_account},
+					  success: function(data)
+					  {
+						  let name = $.parseJSON(data)['name'];
+						  if(name && name.length > 0)
+						  {
+							  $('#current_login_name').text(name);
+						  }
+					  }
+				  })
+				
+			  },
+
+			  error: function()
+			  {
+				  alert('Error in login');
+			  }
+		  })
+	  }
+
+
+	  $('#text_passphrase').change(function (){
+		  _passphrase = this.value;
+		  if(_passphrase)
+		  _login();
+	  })
+
+	  $('a.channel').click(function(){
+		  $('a.channel').removeClass('selected_channel');
+		  _current_channel_address = this.getAttribute('id');
+		  _current_channel_name = this.getAttribute('data-channel-name');
+		  show_message();
+		  $(this).addClass('selected_channel');
+	  })
+
+
+function show_message()
+{
+
+	$.ajax({
+		url: _node_url, data: { 'requestType':'getPrunableMessages', 'chain': 2, 'account':_current_channel_address, 'lastIndex':MAX_MESSAGES},
+		success: function(data)
+		{
+			let msg = $.parseJSON(data)['prunableMessages'];
+			
+			$('div.message').empty();
+			for(let i = msg.length - 1; i >= 0; i--)
+			{
+				if(msg[i]['isText'] && msg[i]['message'])
+				{
+					let date = new Date(msg[i]['transactionTimestamp'] * 1000 + Date.UTC(2018));
+					let _message = "<div class='message' id='" + msg[i]['transactionTimestamp'] +  "'><div class ='message_header'><span class='sender'> " +
+					msg[i]['senderRS'] + "</span><span class='datetime'>"+ date.toLocaleString() + "</span><div><div class='message_body'>"+ "</div></div>";
+
+					$('div.message').append(_message);
+
+					_show_sender_name();
+
+				}
+			}
+		},
+		error: function (err)
+		{
+			consoel.log(err);
+		}
+	})
+}
+
+
+  
+
+  </script>
+ 
